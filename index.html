@@ -5,22 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>1654班 座位排位戰</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 html2canvas 用於網頁截圖 -->
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei'; touch-action: none; /* Prevent pull-to-refresh on mobile */ }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei'; touch-action: none; }
         
         .student-card {
             cursor: grab;
             transition: transform 0.1s;
-            touch-action: none; /* Crucial for custom touch drag */
+            touch-action: none;
             user-select: none;
         }
         .student-card:active {
             cursor: grabbing;
             transform: scale(0.95);
         }
-        /* Mobile dragged visual */
         .student-card.is-dragging {
             opacity: 0.8;
             transform: scale(1.05);
@@ -36,7 +34,6 @@
             border-color: #94a3b8;
             transform: scale(1.02);
         }
-        
         .seat.locked {
             background-color: #f1f5f9;
             border-color: #ef4444; 
@@ -56,32 +53,48 @@
             transition: opacity 0.3s ease;
         }
 
-        /* 截圖專用隱藏樣式 */
-        .hide-on-screenshot {
-            display: flex !important; /* Default */
+        /* --- 視角切換樣式 --- */
+        #capture-area {
+            transition: transform 0.5s ease-in-out;
         }
+        
+        /* 當切換為老師視角時的旋轉設定 */
+        body.teacher-view #capture-area {
+            transform: rotate(180deg);
+        }
+        
+        /* 確保旋轉後，卡片內的文字是正的 */
+        body.teacher-view .student-card > div {
+            transform: rotate(180deg);
+        }
+        /* 確保旋轉後，鎖頭圖示是正的 */
+        body.teacher-view .seat > button {
+             transform: rotate(180deg);
+        }
+        /* 講台文字轉正 */
+        body.teacher-view #blackboard-indicator {
+            transform: rotate(180deg);
+        }
+        /* 走廊文字轉正 */
+        body.teacher-view #hallway-indicator {
+            transform: rotate(180deg);
+        }
+
+        /* --- 截圖專用樣式 --- */
         .taking-screenshot .hide-on-screenshot {
             display: none !important;
         }
         .taking-screenshot .student-card {
-            border: 2px solid #9ca3af !important; /* bg-gray-400 */
+            border: 2px solid #9ca3af !important; 
             background-color: white !important;
             box-shadow: none !important;
-        }
-        /* 老師視角旋轉 */
-        .taking-screenshot #capture-area {
-            transform: rotate(180deg);
-            background-color: white; /* 確保截圖背景為白色 */
-        }
-        .taking-screenshot .student-card > div {
-            transform: rotate(180deg); /* 把字轉回來 */
         }
         .taking-screenshot .seat {
             border-color: #d1d5db !important;
             background-color: white !important;
         }
-        .taking-screenshot #blackboard-indicator {
-            transform: rotate(180deg);
+        .taking-screenshot #capture-area {
+             background-color: white; /* 確保截圖背景是白色的 */
         }
     </style>
 </head>
@@ -111,14 +124,16 @@
             <button onclick="clearSeats()" class="bg-white hover:bg-gray-100 text-indigo-800 text-sm font-bold py-2 px-3 rounded shadow transition-colors">
                 🔄 清空
             </button>
-            <button onclick="takeScreenshot()" class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold py-2 px-3 rounded shadow flex items-center gap-1 transition-colors ml-2">
+            <button id="view-toggle-btn" onclick="toggleView()" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-bold py-2 px-3 rounded shadow flex items-center gap-1 transition-colors ml-1">
+                🔄 切換視角 (目前: 學生)
+            </button>
+            <button onclick="takeScreenshot()" class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold py-2 px-3 rounded shadow flex items-center gap-1 transition-colors">
                 📸 截圖
             </button>
         </div>
     </header>
 
     <!-- Main Content -->
-    <!-- Changed to flex-col on small/medium screens, flex-row on large screens -->
     <main class="flex-1 flex flex-col lg:flex-row overflow-hidden p-2 md:p-4 gap-2 md:gap-4">
         
         <!-- Left/Top: Student Pool -->
@@ -135,7 +150,6 @@
                 </div>
             </div>
             
-            <!-- Changed flex-col to flex-row for horizontal scrolling on mobile -->
             <div id="student-pool" class="flex-1 overflow-auto p-2 md:p-4 flex flex-row lg:flex-col content-start flex-wrap lg:flex-nowrap gap-2 bg-gray-50 drop-zone" ondrop="drop(event)" ondragover="allowDrop(event)">
                 <!-- Students will be injected here by JS -->
             </div>
@@ -143,18 +157,16 @@
 
         <!-- Right/Bottom: Classroom Grid -->
         <section id="capture-area-container" class="w-full lg:w-3/4 h-2/3 lg:h-full bg-white rounded-lg shadow-md flex flex-col border border-gray-200 relative overflow-hidden">
-            <!-- 將需要截圖的區域包起來 -->
-            <div id="capture-area" class="flex flex-col h-full w-full transition-transform duration-300">
-                <div id="blackboard-indicator" class="w-2/3 mx-auto mt-2 h-8 md:h-12 bg-slate-800 rounded-b-xl shadow-inner border-b-4 md:border-b-8 border-slate-700 flex items-center justify-center text-white/50 tracking-widest font-bold text-sm md:text-base shrink-0">
+            <div id="capture-area" class="flex flex-col h-full w-full">
+                <div id="blackboard-indicator" class="w-2/3 mx-auto mt-2 h-8 md:h-12 bg-slate-800 rounded-b-xl shadow-inner border-b-4 md:border-b-8 border-slate-700 flex items-center justify-center text-white/50 tracking-widest font-bold text-sm md:text-base shrink-0 transition-transform duration-500">
                     講 台
                 </div>
                 
                 <div class="flex-1 p-2 md:p-6 overflow-auto flex items-start justify-center gap-2 md:gap-6">
-                    <!-- Added min-w to prevent squishing on iPad portrait -->
                     <div id="classroom-grid" class="grid gap-1 md:gap-3 w-full max-w-4xl min-w-[500px]">
                         <!-- Grid generated by JS -->
                     </div>
-                    <div id="hallway-indicator" class="w-8 md:w-12 shrink-0 bg-orange-50/80 border-2 border-orange-200 rounded-lg flex items-center justify-center text-orange-800/60 font-bold text-sm md:text-xl tracking-[0.5em] shadow-inner py-4" style="writing-mode: vertical-rl;">
+                    <div id="hallway-indicator" class="w-8 md:w-12 shrink-0 bg-orange-50/80 border-2 border-orange-200 rounded-lg flex items-center justify-center text-orange-800/60 font-bold text-sm md:text-xl tracking-[0.5em] shadow-inner py-4 transition-transform duration-500" style="writing-mode: vertical-rl;">
                         走廊
                     </div>
                 </div>
@@ -236,10 +248,28 @@
         </div>
     </div>
 
-    <!-- Container for dragged element clones during touch -->
     <div id="drag-container" class="fixed inset-0 pointer-events-none z-[9999]" data-html2canvas-ignore="true"></div>
 
     <script>
+        // --- 視角切換邏輯 ---
+        let isTeacherView = false;
+        
+        function toggleView() {
+            const body = document.body;
+            const btn = document.getElementById('view-toggle-btn');
+            
+            isTeacherView = !isTeacherView;
+            
+            if (isTeacherView) {
+                body.classList.add('teacher-view');
+                btn.innerHTML = '🔄 切換視角 (目前: 老師)';
+            } else {
+                body.classList.remove('teacher-view');
+                btn.innerHTML = '🔄 切換視角 (目前: 學生)';
+            }
+        }
+
+
         function toggleRuleModal() {
             const modal = document.getElementById('rule-modal');
             const content = document.getElementById('rule-modal-content');
@@ -447,7 +477,6 @@
                     if (scoreEl) scoreEl.innerText = student.score;
 
                     const colorClasses = getColorClasses(index);
-                    // Retain sizing classes based on container
                     let baseClasses = `student-card ${colorClasses} border-2 rounded-md p-2 flex justify-between items-center shadow-sm relative z-0`;
                     if(card.parentNode === pool && window.innerWidth < 1024) {
                         card.className = baseClasses + ' w-[140px] shrink-0';
@@ -479,7 +508,6 @@
             initPool();
             syncScores(false);
             
-            // Re-evaluate widths on resize
             window.addEventListener('resize', () => {
                 const isMobile = window.innerWidth < 1024;
                 document.querySelectorAll('#student-pool .student-card').forEach(card => {
@@ -504,21 +532,17 @@
                     if (col === 1) {
                         const seat = document.createElement('div');
                         seat.id = `seat-${rIdx}-${cIdx}`;
-                        // Increased height for iPad touch targets
                         seat.className = `seat drop-zone relative border-2 border-dashed border-gray-300 rounded-lg h-16 md:h-20 lg:h-24 bg-gray-50 flex items-center justify-center p-1`;
                         
-                        // Desktop HTML5 Drag
                         seat.setAttribute('ondrop', 'drop(event)');
                         seat.setAttribute('ondragover', 'allowDrop(event)');
                         seat.setAttribute('ondragenter', 'dragEnter(event)');
                         seat.setAttribute('ondragleave', 'dragLeave(event)');
                         
                         const lockBtn = document.createElement('button');
-                        // Made lock button larger for touch
-                        lockBtn.className = 'hide-on-screenshot absolute -top-2 -right-2 w-6 h-6 md:w-8 md:h-8 bg-white border border-gray-200 rounded-full shadow hover:bg-gray-100 items-center justify-center text-xs md:text-sm z-10 transition-colors pointer-events-auto';
+                        lockBtn.className = 'hide-on-screenshot absolute -top-2 -right-2 w-6 h-6 md:w-8 md:h-8 bg-white border border-gray-200 rounded-full shadow hover:bg-gray-100 items-center justify-center text-xs md:text-sm z-10 transition-colors pointer-events-auto transition-transform duration-500';
                         lockBtn.innerHTML = '🔓';
                         
-                        // Use both click and touchstart for responsiveness
                         const toggleFn = (e) => toggleLock(e, seat.id, lockBtn);
                         lockBtn.addEventListener('click', toggleFn);
                         lockBtn.addEventListener('touchstart', (e) => { e.preventDefault(); toggleFn(e); }, {passive: false});
@@ -545,25 +569,23 @@
             card.id = `student-${student.id}`;
             card.draggable = true;
             
-            // HTML5 Drag
             card.setAttribute('ondragstart', 'drag(event)');
             card.setAttribute('ondragend', 'dragEnd(event)');
             
-            // Custom Touch Support
             card.addEventListener('touchstart', touchStart, {passive: false});
             
             const colorClasses = getColorClasses(index);
             const isMobile = window.innerWidth < 1024 && container.id === 'student-pool';
             const widthClass = isMobile ? 'w-[140px] shrink-0' : 'w-full';
             
-            card.className = `student-card ${widthClass} ${colorClasses} border-2 rounded-md p-1 md:p-2 flex justify-between items-center shadow-sm relative z-0`;
+            card.className = `student-card ${widthClass} ${colorClasses} border-2 rounded-md p-1 md:p-2 flex justify-between items-center shadow-sm relative z-0 transition-transform duration-500`;
             
             card.innerHTML = `
-                <div class="flex items-center gap-1 md:gap-2">
+                <div class="flex items-center gap-1 md:gap-2 transition-transform duration-500">
                     <span class="text-[10px] md:text-xs font-bold opacity-60 w-4 md:w-5">${student.id}</span>
                     <span class="font-bold text-sm md:text-base tracking-widest">${student.name}</span>
                 </div>
-                <div class="hide-on-screenshot font-black bg-white/50 px-1 md:px-2 py-0.5 rounded text-xs md:text-sm">
+                <div class="font-black bg-white/50 px-1 md:px-2 py-0.5 rounded text-xs md:text-sm transition-transform duration-500">
                     ${student.score}
                 </div>
             `;
@@ -581,7 +603,6 @@
             updatePoolCount();
         }
 
-        // --- Custom Touch Drag & Drop Logic for iPad/Mobile ---
         let activeTouchCard = null;
         let touchClone = null;
         let initialX = 0;
@@ -593,7 +614,6 @@
             if (parentSeat && parentSeat.classList.contains('locked')) {
                 return; 
             }
-            // Prevent scrolling while dragging
             if(e.cancelable) e.preventDefault(); 
             
             activeTouchCard = e.target.closest('.student-card');
@@ -602,14 +622,11 @@
             const touch = e.touches[0];
             const rect = activeTouchCard.getBoundingClientRect();
             
-            // Calculate offset of touch relative to card top-left
             initialX = touch.clientX - rect.left;
             initialY = touch.clientY - rect.top;
 
-            // Create clone for visual feedback
             touchClone = activeTouchCard.cloneNode(true);
             touchClone.classList.add('is-dragging');
-            // Force fixed width so it doesn't collapse
             touchClone.style.width = rect.width + 'px'; 
             touchClone.style.position = 'absolute';
             touchClone.style.left = (touch.clientX - initialX) + 'px';
@@ -617,7 +634,6 @@
             
             document.getElementById('drag-container').appendChild(touchClone);
             
-            // Hide original temporarily
             activeTouchCard.style.opacity = '0.3';
 
             document.addEventListener('touchmove', touchMove, {passive: false});
@@ -626,14 +642,12 @@
 
         function touchMove(e) {
             if (!activeTouchCard || !touchClone) return;
-            e.preventDefault(); // Stop scrolling
+            e.preventDefault(); 
 
             const touch = e.touches[0];
             touchClone.style.left = (touch.clientX - initialX) + 'px';
             touchClone.style.top = (touch.clientY - initialY) + 'px';
 
-            // Find element under touch
-            // Hide clone momentarily to get element underneath
             touchClone.style.display = 'none';
             const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
             touchClone.style.display = '';
@@ -675,8 +689,6 @@
             currentDropZone = null;
         }
 
-
-        // --- HTML5 Drag and Drop Logic (for Desktop) ---
         function drag(ev) {
             const parentSeat = ev.target.closest('.seat');
             if (parentSeat && parentSeat.classList.contains('locked')) {
@@ -730,7 +742,6 @@
             }
         }
 
-        // Shared drop logic for both Touch and Mouse
         function handleDropLogic(dropZone, draggedNode) {
             if (!draggedNode || !dropZone) return;
 
@@ -746,12 +757,10 @@
             else if (dropZone.classList.contains('seat')) {
                 const existingStudent = dropZone.querySelector('.student-card');
                 
-                // If there's an existing student, move them to where the dragged node came from
                 if (existingStudent && existingStudent !== draggedNode) {
                     const originalParent = draggedNode.parentNode;
                     originalParent.appendChild(existingStudent); 
                     
-                    // Adjust sizing based on where they landed
                     if(originalParent.id === 'student-pool' && window.innerWidth < 1024) {
                         existingStudent.classList.remove('w-full');
                         existingStudent.classList.add('w-[140px]', 'shrink-0');
@@ -768,7 +777,6 @@
             updatePoolCount();
         }
 
-        // --- Interactive Features ---
         function toggleLock(ev, seatId, btnElement) {
             ev.stopPropagation(); 
             const seat = document.getElementById(seatId);
@@ -875,34 +883,29 @@
             document.getElementById('pool-count').innerText = `${count}人`;
         }
 
-        // --- Screenshot Logic ---
         function takeScreenshot() {
-            // Check if all students are seated
             const poolCount = document.getElementById('student-pool').querySelectorAll('.student-card').length;
             if (poolCount > 0) {
                 if(!confirm(`還有 ${poolCount} 位同學未入座，確定要直接截圖嗎？`)) return;
             }
 
-            // 1. Add class to trigger CSS transformations (rotate 180, hide buttons)
+            // 加入隱藏 UI 的 class
             document.body.classList.add('taking-screenshot');
             
-            // Allow browser a tiny moment to apply CSS changes
             setTimeout(() => {
                 const captureArea = document.getElementById('capture-area-container');
                 
-                // 2. Use html2canvas to capture the element
                 html2canvas(captureArea, {
-                    scale: 2, // Higher quality
+                    scale: 2, 
                     useCORS: true,
                     backgroundColor: "#ffffff"
                 }).then(canvas => {
-                    // 3. Remove CSS transformations to return to normal UI
+                    // 恢復原本 UI
                     document.body.classList.remove('taking-screenshot');
                     
-                    // 4. Create download link
                     const image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
                     const link = document.createElement('a');
-                    link.download = '1654班_座位表_導師視角.png';
+                    link.download = isTeacherView ? '1654班_座位表_導師視角.png' : '1654班_座位表_學生視角.png';
                     link.href = image;
                     link.click();
                 }).catch(err => {
@@ -910,7 +913,7 @@
                     document.body.classList.remove('taking-screenshot');
                     alert("截圖失敗，請稍後再試。");
                 });
-            }, 300); // 300ms delay to let CSS rotation transition finish
+            }, 300);
         }
     </script>
 </body>
