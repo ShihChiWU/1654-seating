@@ -62,7 +62,8 @@
             transform: rotate(180deg);
         }
         
-        body.teacher-view #capture-area .student-card > div {
+        /* 老師視角旋轉：針對卡片內部內容容器旋轉，確保文字轉正 */
+        body.teacher-view #capture-area .card-content {
             transform: rotate(180deg);
         }
         body.teacher-view #capture-area .seat > button {
@@ -78,22 +79,6 @@
         /* --- 截圖專用樣式 --- */
         .taking-screenshot .hide-on-screenshot {
             display: none !important;
-        }
-        .taking-screenshot .student-card {
-            border: 2px solid #9ca3af !important; 
-            background-color: white !important;
-            box-shadow: none !important;
-            /* 隱藏積分後，將內容置中對齊 */
-            justify-content: center !important;
-        }
-        .taking-screenshot .student-card > div:first-child {
-            /* 確保座號與姓名在截圖時置中 */
-            justify-content: center !important;
-            width: 100% !important;
-        }
-        .taking-screenshot .seat {
-            border-color: #d1d5db !important;
-            background-color: white !important;
         }
         .taking-screenshot #capture-area {
              background-color: white; 
@@ -147,7 +132,7 @@
                 </h2>
                 <div class="text-[10px] md:text-xs text-gray-500 mt-1 flex gap-2 flex-wrap">
                     <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-400"></span>Top 10</span>
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-400"></span>中段班</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span>中段班</span>
                     <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-400"></span>Bottom 10</span>
                 </div>
             </div>
@@ -474,16 +459,24 @@
             studentsData.forEach((student, index) => {
                 const card = document.getElementById(`student-${student.id}`);
                 if (card) {
-                    // 分數區塊的 class 必須保留 hide-on-screenshot
-                    const scoreEl = card.querySelector('.hide-on-screenshot');
+                    // Update score
+                    const scoreEl = card.querySelector('.score-text');
                     if (scoreEl) scoreEl.innerText = student.score;
 
+                    // Update styling classes based on new rank
                     const colorClasses = getColorClasses(index);
-                    let baseClasses = `student-card ${colorClasses} border-2 rounded-md p-2 flex justify-between items-center shadow-sm relative z-0`;
+                    let baseClasses = `student-card ${colorClasses} border-2 rounded-md flex flex-col justify-center items-center shadow-sm relative z-0`;
+                    
                     if(card.parentNode === pool && window.innerWidth < 1024) {
-                        card.className = baseClasses + ' w-[140px] shrink-0';
+                        card.className = baseClasses + ' w-[140px] h-[80px] shrink-0 p-1';
                     } else {
-                        card.className = baseClasses + ' w-full';
+                        card.className = baseClasses + ' w-full h-full p-1 md:p-2';
+                    }
+                    
+                    // Update score block colors
+                    const scoreBlock = card.querySelector('.score-block');
+                    if (scoreBlock) {
+                        scoreBlock.className = `score-block ${getScoreBlockClass(index)} px-2 md:px-3 py-0.5 rounded shadow-sm text-center font-black text-[10px] md:text-xs lg:text-sm leading-none mt-0.5 md:mt-1 w-11/12`;
                     }
                     
                     if (card.parentNode === pool) {
@@ -514,11 +507,11 @@
                 const isMobile = window.innerWidth < 1024;
                 document.querySelectorAll('#student-pool .student-card').forEach(card => {
                     if(isMobile) {
-                        card.classList.remove('w-full');
-                        card.classList.add('w-[140px]', 'shrink-0');
+                        card.classList.remove('w-full', 'h-full', 'p-2');
+                        card.classList.add('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
                     } else {
-                        card.classList.remove('w-[140px]', 'shrink-0');
-                        card.classList.add('w-full');
+                        card.classList.remove('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
+                        card.classList.add('w-full', 'h-full', 'p-2');
                     }
                 });
             });
@@ -534,7 +527,8 @@
                     if (col === 1) {
                         const seat = document.createElement('div');
                         seat.id = `seat-${rIdx}-${cIdx}`;
-                        seat.className = `seat drop-zone relative border-2 border-dashed border-gray-300 rounded-lg h-16 md:h-20 lg:h-24 bg-gray-50 flex items-center justify-center p-1`;
+                        // 將格子拉高，確保直式排版三行文字不擁擠
+                        seat.className = `seat drop-zone relative border-2 border-dashed border-gray-300 rounded-lg h-20 md:h-24 lg:h-32 bg-gray-50 flex items-center justify-center p-1`;
                         
                         seat.setAttribute('ondrop', 'drop(event)');
                         seat.setAttribute('ondragover', 'allowDrop(event)');
@@ -542,7 +536,6 @@
                         seat.setAttribute('ondragleave', 'dragLeave(event)');
                         
                         const lockBtn = document.createElement('button');
-                        // 加入 hide-on-screenshot 確保截圖不出現鎖頭
                         lockBtn.className = 'hide-on-screenshot absolute -top-2 -right-2 w-6 h-6 md:w-8 md:h-8 bg-white border border-gray-200 rounded-full shadow hover:bg-gray-100 items-center justify-center text-xs md:text-sm z-10 transition-colors pointer-events-auto transition-transform duration-500';
                         lockBtn.innerHTML = '🔓';
                         
@@ -561,10 +554,18 @@
             });
         }
 
+        // 外層邊框與底色
         function getColorClasses(rankIndex) {
-            if (rankIndex < 10) return 'bg-blue-100 border-blue-400 text-blue-900 shadow-blue-200/50';
-            if (rankIndex >= 27) return 'bg-red-100 border-red-400 text-red-900 shadow-red-200/50';
-            return 'bg-yellow-100 border-yellow-400 text-yellow-900 shadow-yellow-200/50';
+            if (rankIndex < 10) return 'bg-blue-50 border-blue-400 text-blue-900 shadow-blue-200/50';
+            if (rankIndex >= 27) return 'bg-red-50 border-red-400 text-red-900 shadow-red-200/50';
+            return 'bg-amber-50 border-amber-400 text-amber-900 shadow-amber-200/50';
+        }
+
+        // 獨立的高反差色塊 (最底下的積分標誌)
+        function getScoreBlockClass(rankIndex) {
+            if (rankIndex < 10) return 'bg-blue-600 text-white';
+            if (rankIndex >= 27) return 'bg-red-500 text-white';
+            return 'bg-amber-400 text-amber-900'; 
         }
 
         function createCard(student, index, container) {
@@ -574,23 +575,23 @@
             
             card.setAttribute('ondragstart', 'drag(event)');
             card.setAttribute('ondragend', 'dragEnd(event)');
-            
             card.addEventListener('touchstart', touchStart, {passive: false});
             
             const colorClasses = getColorClasses(index);
+            const scoreClass = getScoreBlockClass(index);
             const isMobile = window.innerWidth < 1024 && container.id === 'student-pool';
-            const widthClass = isMobile ? 'w-[140px] shrink-0' : 'w-full';
+            const sizingClass = isMobile ? 'w-[140px] h-[80px] shrink-0 p-1' : 'w-full h-full p-1 md:p-2';
             
-            card.className = `student-card ${widthClass} ${colorClasses} border-2 rounded-md p-1 md:p-2 flex justify-between items-center shadow-sm relative z-0 transition-transform duration-500`;
+            card.className = `student-card ${sizingClass} ${colorClasses} border-2 rounded-md flex flex-col justify-center items-center shadow-sm relative z-0 transition-transform duration-500`;
             
-            // 這裡將「積分」的外層 div 加入 hide-on-screenshot class
+            // 【核心修正】：直式排版 (姓名、座號、色塊)，三者上下置中
             card.innerHTML = `
-                <div class="flex items-center gap-1 md:gap-2 transition-transform duration-500 w-full">
-                    <span class="text-[10px] md:text-xs font-bold opacity-60 w-4 md:w-5 shrink-0">${student.id}</span>
-                    <span class="font-bold text-sm md:text-base tracking-widest flex-1">${student.name}</span>
-                </div>
-                <div class="hide-on-screenshot font-black bg-white/50 px-1 md:px-2 py-0.5 rounded text-xs md:text-sm transition-transform duration-500 shrink-0">
-                    ${student.score}
+                <div class="card-content flex flex-col items-center justify-center w-full h-full transition-transform duration-500">
+                    <span class="font-bold text-sm md:text-lg lg:text-xl tracking-wider leading-none text-gray-800">${student.name}</span>
+                    <span class="text-[10px] md:text-xs lg:text-sm font-bold text-gray-500 leading-none mt-1 md:mt-1.5">${student.id}</span>
+                    <div class="score-block ${scoreClass} px-2 md:px-3 py-0.5 rounded shadow-sm text-center font-black text-[10px] md:text-xs lg:text-sm leading-none mt-1 md:mt-1.5 w-11/12 overflow-hidden overflow-ellipsis whitespace-nowrap">
+                        <span class="score-text">${student.score}</span> 分
+                    </div>
                 </div>
             `;
             container.appendChild(card);
@@ -632,6 +633,7 @@
             touchClone = activeTouchCard.cloneNode(true);
             touchClone.classList.add('is-dragging');
             touchClone.style.width = rect.width + 'px'; 
+            touchClone.style.height = rect.height + 'px'; 
             touchClone.style.position = 'absolute';
             touchClone.style.left = (touch.clientX - initialX) + 'px';
             touchClone.style.top = (touch.clientY - initialY) + 'px';
@@ -754,8 +756,8 @@
             if (dropZone.id === 'student-pool') {
                 dropZone.appendChild(draggedNode);
                 if(window.innerWidth < 1024) {
-                    draggedNode.classList.remove('w-full');
-                    draggedNode.classList.add('w-[140px]', 'shrink-0');
+                    draggedNode.classList.remove('w-full', 'h-full', 'p-2');
+                    draggedNode.classList.add('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
                 }
             } 
             else if (dropZone.classList.contains('seat')) {
@@ -766,17 +768,17 @@
                     originalParent.appendChild(existingStudent); 
                     
                     if(originalParent.id === 'student-pool' && window.innerWidth < 1024) {
-                        existingStudent.classList.remove('w-full');
-                        existingStudent.classList.add('w-[140px]', 'shrink-0');
+                        existingStudent.classList.remove('w-full', 'h-full', 'p-2');
+                        existingStudent.classList.add('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
                     } else {
-                        existingStudent.classList.remove('w-[140px]', 'shrink-0');
-                        existingStudent.classList.add('w-full');
+                        existingStudent.classList.remove('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
+                        existingStudent.classList.add('w-full', 'h-full', 'p-2');
                     }
                 }
                 
                 dropZone.appendChild(draggedNode); 
-                draggedNode.classList.remove('w-[140px]', 'shrink-0');
-                draggedNode.classList.add('w-full');
+                draggedNode.classList.remove('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
+                draggedNode.classList.add('w-full', 'h-full', 'p-2');
             }
             updatePoolCount();
         }
@@ -819,18 +821,21 @@
                     if (student) {
                         pool.appendChild(student);
                         if(isMobile) {
-                            student.classList.remove('w-full');
-                            student.classList.add('w-[140px]', 'shrink-0');
+                            student.classList.remove('w-full', 'h-full', 'p-2');
+                            student.classList.add('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
                         }
                     }
                 });
                 
                 const cards = Array.from(pool.querySelectorAll('.student-card'));
                 cards.sort((a, b) => {
-                    const scoreA = parseInt(a.querySelector('.font-black').innerText);
-                    const scoreB = parseInt(b.querySelector('.font-black').innerText);
+                    const scoreA = parseInt(a.querySelector('.score-text').innerText);
+                    const scoreB = parseInt(b.querySelector('.score-text').innerText);
                     if (scoreB !== scoreA) return scoreB - scoreA;
-                    return parseInt(a.querySelector('span:first-child').innerText) - parseInt(b.querySelector('span:first-child').innerText);
+                    // 以座號作為同分的排序依據
+                    const idA = parseInt(a.querySelector('span:nth-child(2)').innerText);
+                    const idB = parseInt(b.querySelector('span:nth-child(2)').innerText);
+                    return idA - idB;
                 });
                 cards.forEach(card => pool.appendChild(card));
                 updatePoolCount();
@@ -856,16 +861,16 @@
                 if (existing) {
                     document.getElementById('student-pool').appendChild(existing);
                     if(isMobile) {
-                        existing.classList.remove('w-full');
-                        existing.classList.add('w-[140px]', 'shrink-0');
+                        existing.classList.remove('w-full', 'h-full', 'p-2');
+                        existing.classList.add('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
                     }
                 }
                 
                 if (studentIdx < allStudents.length) {
                     const student = allStudents[studentIdx];
                     seat.appendChild(student);
-                    student.classList.remove('w-[140px]', 'shrink-0');
-                    student.classList.add('w-full');
+                    student.classList.remove('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
+                    student.classList.add('w-full', 'h-full', 'p-2');
                     studentIdx++;
                 }
             });
@@ -874,8 +879,8 @@
                 const student = allStudents[studentIdx];
                 document.getElementById('student-pool').appendChild(student);
                 if(isMobile) {
-                    student.classList.remove('w-full');
-                    student.classList.add('w-[140px]', 'shrink-0');
+                    student.classList.remove('w-full', 'h-full', 'p-2');
+                    student.classList.add('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
                 }
                 studentIdx++;
             }
@@ -893,7 +898,7 @@
                 if(!confirm(`還有 ${poolCount} 位同學未入座，確定要直接截圖嗎？`)) return;
             }
 
-            // 加入隱藏 UI 的 class (包含隱藏積分)
+            // 加入截圖專用 class (僅隱藏多餘 UI，不隱藏卡片顏色與積分)
             document.body.classList.add('taking-screenshot');
             
             setTimeout(() => {
