@@ -53,36 +53,90 @@
             transition: opacity 0.3s ease;
         }
 
-        /* --- 視角切換樣式 --- */
-        #capture-area {
-            transition: transform 0.5s ease-in-out;
+        /* ==========================================
+           🌟 RWD 自適應核心引擎 (解決斷行問題)
+           ========================================== */
+           
+        /* 1. 待選區卡片大小自適應 */
+        #student-pool .student-card {
+            width: 100px;
+            height: 70px;
+            flex-shrink: 0;
+            padding: 4px;
         }
-        
-        body.teacher-view #capture-area {
-            transform: rotate(180deg);
+        @media (min-width: 640px) {
+            #student-pool .student-card { width: 120px; height: 80px; }
         }
-        
-        /* 老師視角旋轉：針對卡片內部內容容器旋轉，確保文字轉正 */
-        body.teacher-view #capture-area .card-content {
-            transform: rotate(180deg);
-        }
-        body.teacher-view #capture-area .seat > button {
-             transform: rotate(180deg);
-        }
-        body.teacher-view #blackboard-indicator {
-            transform: rotate(180deg);
-        }
-        body.teacher-view #hallway-indicator {
-            transform: rotate(180deg);
+        @media (min-width: 1024px) {
+            #student-pool .student-card { width: 100%; height: auto; min-height: 80px; padding: 8px; }
         }
 
+        /* 2. 座位區卡片大小自適應 */
+        #classroom-grid .student-card {
+            width: 100%;
+            height: 100%;
+            padding: 2px;
+        }
+        @media (min-width: 768px) {
+            #classroom-grid .student-card { padding: 4px; }
+        }
+        @media (min-width: 1024px) {
+            #classroom-grid .student-card { padding: 8px; }
+        }
+
+        /* 3. 姓名排版：強制不換行，自動縮放字體 */
+        .student-name {
+            white-space: nowrap !important; /* 絕對不換行 */
+            overflow: hidden;
+            text-overflow: clip;
+            width: 100%;
+            text-align: center;
+            font-size: 13px; /* 手機預設大小 */
+            letter-spacing: 0.05em;
+        }
+        @media (min-width: 768px) { .student-name { font-size: 16px; } } /* iPad 大小 */
+        @media (min-width: 1024px) { .student-name { font-size: 18px; letter-spacing: 0.1em; } } /* 電腦大小 */
+
+        /* 4. 座號排版：強制不換行 */
+        .student-id { 
+            white-space: nowrap !important;
+            font-size: 10px; 
+            margin-top: 2px; 
+        }
+        @media (min-width: 768px) { .student-id { font-size: 12px; margin-top: 4px; } }
+        @media (min-width: 1024px) { .student-id { font-size: 13px; } }
+
+        /* 5. 積分色塊排版：強制不換行 */
+        .score-block {
+            font-size: 11px;
+            padding: 2px 4px;
+            margin-top: 4px;
+            width: 95%;
+            white-space: nowrap !important; /* 絕對不換行 */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        @media (min-width: 768px) { .score-block { font-size: 13px; padding: 2px 8px; margin-top: 6px;} }
+
+        /* 座位鎖頭按鈕自適應 */
+        .seat-lock-btn { width: 22px; height: 22px; font-size: 10px; }
+        @media (min-width: 768px) { .seat-lock-btn { width: 30px; height: 30px; font-size: 14px; } }
+
+        /* ==========================================
+           🔄 視角切換樣式
+           ========================================== */
+        #capture-area { transition: transform 0.5s ease-in-out; }
+        body.teacher-view #capture-area { transform: rotate(180deg); }
+        
+        /* 老師視角：確保卡片內容文字轉正 */
+        body.teacher-view #capture-area .card-content { transform: rotate(180deg); }
+        body.teacher-view #capture-area .seat > button { transform: rotate(180deg); }
+        body.teacher-view #blackboard-indicator { transform: rotate(180deg); }
+        body.teacher-view #hallway-indicator { transform: rotate(180deg); }
+
         /* --- 截圖專用樣式 --- */
-        .taking-screenshot .hide-on-screenshot {
-            display: none !important;
-        }
-        .taking-screenshot #capture-area {
-             background-color: white; 
-        }
+        .taking-screenshot .hide-on-screenshot { display: none !important; }
+        .taking-screenshot #capture-area { background-color: white; }
     </style>
 </head>
 <body class="bg-gray-100 h-screen overflow-hidden flex flex-col relative">
@@ -112,7 +166,7 @@
                 🔄 清空
             </button>
             <button id="view-toggle-btn" onclick="toggleView()" class="bg-purple-500 hover:bg-purple-600 text-white text-sm font-bold py-2 px-3 rounded shadow flex items-center gap-1 transition-colors ml-1">
-                🔄 切換視角 (目前: 學生)
+                🔄 視角 (目前: 學生)
             </button>
             <button onclick="takeScreenshot()" class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold py-2 px-3 rounded shadow flex items-center gap-1 transition-colors">
                 📸 截圖
@@ -249,10 +303,10 @@
             
             if (isTeacherView) {
                 body.classList.add('teacher-view');
-                btn.innerHTML = '🔄 切換視角 (目前: 老師)';
+                btn.innerHTML = '🔄 視角 (目前: 老師)';
             } else {
                 body.classList.remove('teacher-view');
-                btn.innerHTML = '🔄 切換視角 (目前: 學生)';
+                btn.innerHTML = '🔄 視角 (目前: 學生)';
             }
         }
 
@@ -459,24 +513,18 @@
             studentsData.forEach((student, index) => {
                 const card = document.getElementById(`student-${student.id}`);
                 if (card) {
-                    // Update score
                     const scoreEl = card.querySelector('.score-text');
                     if (scoreEl) scoreEl.innerText = student.score;
 
-                    // Update styling classes based on new rank
                     const colorClasses = getColorClasses(index);
-                    let baseClasses = `student-card ${colorClasses} border-2 rounded-md flex flex-col justify-center items-center shadow-sm relative z-0`;
+                    const scoreClass = getScoreBlockClass(index);
                     
-                    if(card.parentNode === pool && window.innerWidth < 1024) {
-                        card.className = baseClasses + ' w-[140px] h-[80px] shrink-0 p-1';
-                    } else {
-                        card.className = baseClasses + ' w-full h-full p-1 md:p-2';
-                    }
+                    // 重置卡片的背景與邊框顏色
+                    card.className = `student-card ${colorClasses} border-2 rounded-md flex flex-col justify-center items-center shadow-sm relative z-0 transition-transform duration-500`;
                     
-                    // Update score block colors
                     const scoreBlock = card.querySelector('.score-block');
                     if (scoreBlock) {
-                        scoreBlock.className = `score-block ${getScoreBlockClass(index)} px-2 md:px-3 py-0.5 rounded shadow-sm text-center font-black text-[10px] md:text-xs lg:text-sm leading-none mt-0.5 md:mt-1 w-11/12`;
+                        scoreBlock.className = `score-block ${scoreClass} rounded shadow-sm text-center font-black leading-none mt-1 md:mt-1.5`;
                     }
                     
                     if (card.parentNode === pool) {
@@ -502,19 +550,6 @@
             initGrid();
             initPool();
             syncScores(false);
-            
-            window.addEventListener('resize', () => {
-                const isMobile = window.innerWidth < 1024;
-                document.querySelectorAll('#student-pool .student-card').forEach(card => {
-                    if(isMobile) {
-                        card.classList.remove('w-full', 'h-full', 'p-2');
-                        card.classList.add('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
-                    } else {
-                        card.classList.remove('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
-                        card.classList.add('w-full', 'h-full', 'p-2');
-                    }
-                });
-            });
         });
 
         function initGrid() {
@@ -527,8 +562,8 @@
                     if (col === 1) {
                         const seat = document.createElement('div');
                         seat.id = `seat-${rIdx}-${cIdx}`;
-                        // 將格子拉高，確保直式排版三行文字不擁擠
-                        seat.className = `seat drop-zone relative border-2 border-dashed border-gray-300 rounded-lg h-20 md:h-24 lg:h-32 bg-gray-50 flex items-center justify-center p-1`;
+                        // 座位高度自適應，給予內容足夠的空間
+                        seat.className = `seat drop-zone relative border-2 border-dashed border-gray-300 rounded-lg h-16 sm:h-20 md:h-24 lg:h-28 bg-gray-50 flex items-center justify-center p-0.5 sm:p-1`;
                         
                         seat.setAttribute('ondrop', 'drop(event)');
                         seat.setAttribute('ondragover', 'allowDrop(event)');
@@ -536,7 +571,7 @@
                         seat.setAttribute('ondragleave', 'dragLeave(event)');
                         
                         const lockBtn = document.createElement('button');
-                        lockBtn.className = 'hide-on-screenshot absolute -top-2 -right-2 w-6 h-6 md:w-8 md:h-8 bg-white border border-gray-200 rounded-full shadow hover:bg-gray-100 items-center justify-center text-xs md:text-sm z-10 transition-colors pointer-events-auto transition-transform duration-500';
+                        lockBtn.className = 'seat-lock-btn hide-on-screenshot absolute -top-2 -right-2 bg-white border border-gray-200 rounded-full shadow hover:bg-gray-100 flex items-center justify-center z-10 transition-colors pointer-events-auto transition-transform duration-500';
                         lockBtn.innerHTML = '🔓';
                         
                         const toggleFn = (e) => toggleLock(e, seat.id, lockBtn);
@@ -561,7 +596,7 @@
             return 'bg-amber-50 border-amber-400 text-amber-900 shadow-amber-200/50';
         }
 
-        // 獨立的高反差色塊 (最底下的積分標誌)
+        // 獨立的高反差色塊
         function getScoreBlockClass(rankIndex) {
             if (rankIndex < 10) return 'bg-blue-600 text-white';
             if (rankIndex >= 27) return 'bg-red-500 text-white';
@@ -579,17 +614,15 @@
             
             const colorClasses = getColorClasses(index);
             const scoreClass = getScoreBlockClass(index);
-            const isMobile = window.innerWidth < 1024 && container.id === 'student-pool';
-            const sizingClass = isMobile ? 'w-[140px] h-[80px] shrink-0 p-1' : 'w-full h-full p-1 md:p-2';
             
-            card.className = `student-card ${sizingClass} ${colorClasses} border-2 rounded-md flex flex-col justify-center items-center shadow-sm relative z-0 transition-transform duration-500`;
+            // 移除硬編碼的寬高，全部交給 CSS 媒體查詢處理
+            card.className = `student-card ${colorClasses} border-2 rounded-md flex flex-col justify-center items-center shadow-sm relative z-0 transition-transform duration-500`;
             
-            // 【核心修正】：直式排版 (姓名、座號、色塊)，三者上下置中
             card.innerHTML = `
                 <div class="card-content flex flex-col items-center justify-center w-full h-full transition-transform duration-500">
-                    <span class="font-bold text-sm md:text-lg lg:text-xl tracking-wider leading-none text-gray-800">${student.name}</span>
-                    <span class="text-[10px] md:text-xs lg:text-sm font-bold text-gray-500 leading-none mt-1 md:mt-1.5">${student.id}</span>
-                    <div class="score-block ${scoreClass} px-2 md:px-3 py-0.5 rounded shadow-sm text-center font-black text-[10px] md:text-xs lg:text-sm leading-none mt-1 md:mt-1.5 w-11/12 overflow-hidden overflow-ellipsis whitespace-nowrap">
+                    <span class="student-name font-bold text-gray-800">${student.name}</span>
+                    <span class="student-id font-bold text-gray-500 leading-none">${student.id}</span>
+                    <div class="score-block ${scoreClass} rounded shadow-sm text-center font-black leading-none">
                         <span class="score-text">${student.score}</span> 分
                     </div>
                 </div>
@@ -748,6 +781,7 @@
             }
         }
 
+        // 優化：卡片大小完全交給 CSS 處理，JS 不再干涉寬高 class
         function handleDropLogic(dropZone, draggedNode) {
             if (!draggedNode || !dropZone) return;
 
@@ -755,10 +789,6 @@
 
             if (dropZone.id === 'student-pool') {
                 dropZone.appendChild(draggedNode);
-                if(window.innerWidth < 1024) {
-                    draggedNode.classList.remove('w-full', 'h-full', 'p-2');
-                    draggedNode.classList.add('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
-                }
             } 
             else if (dropZone.classList.contains('seat')) {
                 const existingStudent = dropZone.querySelector('.student-card');
@@ -766,19 +796,9 @@
                 if (existingStudent && existingStudent !== draggedNode) {
                     const originalParent = draggedNode.parentNode;
                     originalParent.appendChild(existingStudent); 
-                    
-                    if(originalParent.id === 'student-pool' && window.innerWidth < 1024) {
-                        existingStudent.classList.remove('w-full', 'h-full', 'p-2');
-                        existingStudent.classList.add('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
-                    } else {
-                        existingStudent.classList.remove('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
-                        existingStudent.classList.add('w-full', 'h-full', 'p-2');
-                    }
                 }
                 
                 dropZone.appendChild(draggedNode); 
-                draggedNode.classList.remove('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
-                draggedNode.classList.add('w-full', 'h-full', 'p-2');
             }
             updatePoolCount();
         }
@@ -808,7 +828,6 @@
             if(confirm("確定要將所有同學退回待選區嗎？(將解除所有鎖定)")) {
                 const seats = document.querySelectorAll('.seat');
                 const pool = document.getElementById('student-pool');
-                const isMobile = window.innerWidth < 1024;
                 
                 seats.forEach(seat => {
                     seat.classList.remove('locked');
@@ -820,10 +839,6 @@
                     const student = seat.querySelector('.student-card');
                     if (student) {
                         pool.appendChild(student);
-                        if(isMobile) {
-                            student.classList.remove('w-full', 'h-full', 'p-2');
-                            student.classList.add('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
-                        }
                     }
                 });
                 
@@ -832,9 +847,8 @@
                     const scoreA = parseInt(a.querySelector('.score-text').innerText);
                     const scoreB = parseInt(b.querySelector('.score-text').innerText);
                     if (scoreB !== scoreA) return scoreB - scoreA;
-                    // 以座號作為同分的排序依據
-                    const idA = parseInt(a.querySelector('span:nth-child(2)').innerText);
-                    const idB = parseInt(b.querySelector('span:nth-child(2)').innerText);
+                    const idA = parseInt(a.querySelector('.student-id').innerText);
+                    const idB = parseInt(b.querySelector('.student-id').innerText);
                     return idA - idB;
                 });
                 cards.forEach(card => pool.appendChild(card));
@@ -854,23 +868,16 @@
             }
 
             let studentIdx = 0;
-            const isMobile = window.innerWidth < 1024;
 
             allSeats.forEach(seat => {
                 const existing = seat.querySelector('.student-card');
                 if (existing) {
                     document.getElementById('student-pool').appendChild(existing);
-                    if(isMobile) {
-                        existing.classList.remove('w-full', 'h-full', 'p-2');
-                        existing.classList.add('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
-                    }
                 }
                 
                 if (studentIdx < allStudents.length) {
                     const student = allStudents[studentIdx];
                     seat.appendChild(student);
-                    student.classList.remove('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
-                    student.classList.add('w-full', 'h-full', 'p-2');
                     studentIdx++;
                 }
             });
@@ -878,10 +885,6 @@
             while (studentIdx < allStudents.length) {
                 const student = allStudents[studentIdx];
                 document.getElementById('student-pool').appendChild(student);
-                if(isMobile) {
-                    student.classList.remove('w-full', 'h-full', 'p-2');
-                    student.classList.add('w-[140px]', 'h-[80px]', 'shrink-0', 'p-1');
-                }
                 studentIdx++;
             }
             updatePoolCount();
@@ -898,7 +901,6 @@
                 if(!confirm(`還有 ${poolCount} 位同學未入座，確定要直接截圖嗎？`)) return;
             }
 
-            // 加入截圖專用 class (僅隱藏多餘 UI，不隱藏卡片顏色與積分)
             document.body.classList.add('taking-screenshot');
             
             setTimeout(() => {
@@ -909,7 +911,6 @@
                     useCORS: true,
                     backgroundColor: "#ffffff"
                 }).then(canvas => {
-                    // 恢復原本 UI
                     document.body.classList.remove('taking-screenshot');
                     
                     const image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
