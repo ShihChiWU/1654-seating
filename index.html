@@ -58,24 +58,19 @@
             transition: transform 0.5s ease-in-out;
         }
         
-        /* 當切換為老師視角時的旋轉設定 */
         body.teacher-view #capture-area {
             transform: rotate(180deg);
         }
         
-        /* 確保旋轉後，卡片內的文字是正的 */
-        body.teacher-view .student-card > div {
+        body.teacher-view #capture-area .student-card > div {
             transform: rotate(180deg);
         }
-        /* 確保旋轉後，鎖頭圖示是正的 */
-        body.teacher-view .seat > button {
+        body.teacher-view #capture-area .seat > button {
              transform: rotate(180deg);
         }
-        /* 講台文字轉正 */
         body.teacher-view #blackboard-indicator {
             transform: rotate(180deg);
         }
-        /* 走廊文字轉正 */
         body.teacher-view #hallway-indicator {
             transform: rotate(180deg);
         }
@@ -88,13 +83,20 @@
             border: 2px solid #9ca3af !important; 
             background-color: white !important;
             box-shadow: none !important;
+            /* 隱藏積分後，將內容置中對齊 */
+            justify-content: center !important;
+        }
+        .taking-screenshot .student-card > div:first-child {
+            /* 確保座號與姓名在截圖時置中 */
+            justify-content: center !important;
+            width: 100% !important;
         }
         .taking-screenshot .seat {
             border-color: #d1d5db !important;
             background-color: white !important;
         }
         .taking-screenshot #capture-area {
-             background-color: white; /* 確保截圖背景是白色的 */
+             background-color: white; 
         }
     </style>
 </head>
@@ -268,7 +270,6 @@
                 btn.innerHTML = '🔄 切換視角 (目前: 學生)';
             }
         }
-
 
         function toggleRuleModal() {
             const modal = document.getElementById('rule-modal');
@@ -473,7 +474,8 @@
             studentsData.forEach((student, index) => {
                 const card = document.getElementById(`student-${student.id}`);
                 if (card) {
-                    const scoreEl = card.querySelector('.font-black');
+                    // 分數區塊的 class 必須保留 hide-on-screenshot
+                    const scoreEl = card.querySelector('.hide-on-screenshot');
                     if (scoreEl) scoreEl.innerText = student.score;
 
                     const colorClasses = getColorClasses(index);
@@ -540,6 +542,7 @@
                         seat.setAttribute('ondragleave', 'dragLeave(event)');
                         
                         const lockBtn = document.createElement('button');
+                        // 加入 hide-on-screenshot 確保截圖不出現鎖頭
                         lockBtn.className = 'hide-on-screenshot absolute -top-2 -right-2 w-6 h-6 md:w-8 md:h-8 bg-white border border-gray-200 rounded-full shadow hover:bg-gray-100 items-center justify-center text-xs md:text-sm z-10 transition-colors pointer-events-auto transition-transform duration-500';
                         lockBtn.innerHTML = '🔓';
                         
@@ -580,12 +583,13 @@
             
             card.className = `student-card ${widthClass} ${colorClasses} border-2 rounded-md p-1 md:p-2 flex justify-between items-center shadow-sm relative z-0 transition-transform duration-500`;
             
+            // 這裡將「積分」的外層 div 加入 hide-on-screenshot class
             card.innerHTML = `
-                <div class="flex items-center gap-1 md:gap-2 transition-transform duration-500">
-                    <span class="text-[10px] md:text-xs font-bold opacity-60 w-4 md:w-5">${student.id}</span>
-                    <span class="font-bold text-sm md:text-base tracking-widest">${student.name}</span>
+                <div class="flex items-center gap-1 md:gap-2 transition-transform duration-500 w-full">
+                    <span class="text-[10px] md:text-xs font-bold opacity-60 w-4 md:w-5 shrink-0">${student.id}</span>
+                    <span class="font-bold text-sm md:text-base tracking-widest flex-1">${student.name}</span>
                 </div>
-                <div class="font-black bg-white/50 px-1 md:px-2 py-0.5 rounded text-xs md:text-sm transition-transform duration-500">
+                <div class="hide-on-screenshot font-black bg-white/50 px-1 md:px-2 py-0.5 rounded text-xs md:text-sm transition-transform duration-500 shrink-0">
                     ${student.score}
                 </div>
             `;
@@ -889,7 +893,7 @@
                 if(!confirm(`還有 ${poolCount} 位同學未入座，確定要直接截圖嗎？`)) return;
             }
 
-            // 加入隱藏 UI 的 class
+            // 加入隱藏 UI 的 class (包含隱藏積分)
             document.body.classList.add('taking-screenshot');
             
             setTimeout(() => {
